@@ -314,19 +314,19 @@ function App() {
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
           {/* Master Vault Card */}
           {walletStats.masterBalance && (
-            <div className="bg-[#1A2333]/80 border border-emerald-500/30 p-4 rounded-xl flex justify-between items-center">
+            <div className="bg-[#1A2333]/80 border border-emerald-500/30 p-3 sm:p-4 rounded-xl flex justify-between items-start sm:items-center">
               <div>
-                <p className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider flex items-center gap-1">
+                <p className="text-[9px] sm:text-[10px] uppercase font-bold text-emerald-400 tracking-wider flex items-center gap-1">
                   <ShieldCheck size={12} /> Master Vault
                 </p>
-                <p className="text-lg font-black text-white tracking-tight mt-0.5">
+                <p className="text-sm sm:text-lg font-black text-white tracking-tight mt-1">
                   {walletStats.masterBalance}
                 </p>
               </div>
-              <span className="px-2 py-1 text-[10px] uppercase font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded">
+              <span className="px-1.5 py-0.5 text-[9px] sm:text-[10px] uppercase font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded">
                 Vault
               </span>
             </div>
@@ -334,23 +334,23 @@ function App() {
 
           {/* Sub-Wallets Cards */}
           {(walletStats.wallets || []).map((w, i) => (
-            <div key={i} className="bg-black/30 border border-white/5 p-4 rounded-xl flex justify-between items-center hover:border-white/10 transition">
+            <div key={i} className="bg-black/30 border border-white/5 p-3 sm:p-4 rounded-xl flex justify-between items-start sm:items-center hover:border-white/10 transition">
               <div>
-                <p className="text-[10px] font-mono text-gray-500 uppercase">
-                  {w.address ? `${w.address.slice(0, 6)}...${w.address.slice(-4)}` : `Sub-Wallet ${i + 1}`}
+                <p className="text-[9px] sm:text-[10px] font-mono text-gray-500 uppercase">
+                  {w.address ? `${w.address.slice(0, 4)}...${w.address.slice(-4)}` : `Sub ${i + 1}`}
                 </p>
-                <p className="text-base font-bold text-gray-200 mt-0.5">
+                <p className="text-sm sm:text-base font-bold text-gray-200 mt-1">
                   {parseFloat(w.balance || 0).toFixed(4)} SOL
                 </p>
-                <p className="text-[10px] text-gray-500 mt-0.5">{w.totalSnipes || 0} snipes</p>
+                <p className="text-[9px] text-gray-500 mt-0.5">{w.totalSnipes || 0} snipes</p>
               </div>
-              <span className={`inline-flex items-center gap-1 py-1 px-2.5 rounded text-[10px] font-bold border ${w.inUse
+              <span className={`inline-flex items-center gap-1 py-0.5 px-1.5 sm:px-2 rounded text-[9px] sm:text-[10px] font-bold border ${w.inUse
                   ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
                   : (w.balance || 0) < 0.05
                     ? 'bg-red-500/10 text-red-400 border-red-500/20'
                     : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                 }`}>
-                {w.inUse ? 'In Use' : (w.balance || 0) < 0.05 ? 'Low Bal' : 'Ready'}
+                {w.inUse ? 'In Use' : (w.balance || 0) < 0.05 ? 'Low' : 'Ready'}
               </span>
             </div>
           ))}
