@@ -6,7 +6,7 @@ import {
   ChevronDown, ChevronUp, BarChart2, Target
 } from 'lucide-react';
 
-const BOT_API_URL = 'http://169.58.87.225:3001';
+const BOT_API_URL = 'https://insider-tropical-hottest-provisions.trycloudflare.com';
 
 function App() {
   const [apiKey, setApiKey] = useState(localStorage.getItem('sinperApiKey') || '');
@@ -78,7 +78,7 @@ function App() {
           const data = JSON.parse(event.data);
           setStatus(data);
           setError(null);
-        } catch {}
+        } catch { }
       };
 
       es.onerror = () => {
@@ -243,11 +243,10 @@ function App() {
         <div className="flex flex-wrap gap-3 justify-end">
           <button
             onClick={() => toggleMode(isTestMode)}
-            className={`px-4 py-2.5 rounded-xl border transition flex items-center gap-2 text-sm font-semibold shadow-lg ${
-              isTestMode
+            className={`px-4 py-2.5 rounded-xl border transition flex items-center gap-2 text-sm font-semibold shadow-lg ${isTestMode
                 ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/20'
                 : 'bg-red-500/10 border-red-500/50 text-red-400 hover:bg-red-500/20'
-            }`}
+              }`}
           >
             <div className={`w-2 h-2 rounded-full ${isTestMode ? 'bg-emerald-400' : 'bg-red-400'} animate-pulse`}></div>
             {isTestMode ? 'Test Mode' : 'Live Mode'}
@@ -263,11 +262,10 @@ function App() {
           </button>
           <button
             onClick={() => toggleBot(isRunning ? 'stop' : 'start')}
-            className={`px-6 py-2.5 rounded-xl transition flex items-center gap-2 text-sm font-bold shadow-lg ${
-              isRunning
+            className={`px-6 py-2.5 rounded-xl transition flex items-center gap-2 text-sm font-bold shadow-lg ${isRunning
                 ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30 hover:bg-rose-500/20'
                 : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20'
-            }`}
+              }`}
           >
             {isRunning ? <PauseCircle size={20} /> : <PlayCircle size={20} />}
             {isRunning ? 'Pause Sniping' : 'Resume Sniping'}
@@ -390,22 +388,20 @@ function App() {
                           </td>
                           {/* Track badge */}
                           <td className="px-5 py-4 text-center">
-                            <span className={`inline-flex py-0.5 px-2 rounded text-xs font-medium ${
-                              pos.source === 'amm'
+                            <span className={`inline-flex py-0.5 px-2 rounded text-xs font-medium ${pos.source === 'amm'
                                 ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
                                 : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                            }`}>
+                              }`}>
                               {pos.source === 'amm' ? 'AMM' : 'Curve'}
                             </span>
                           </td>
                           {/* Fix 14: live unrealised P&L */}
                           <td className="px-5 py-4 text-center">
                             {unrealisedPct !== null ? (
-                              <span className={`inline-flex items-center gap-1 py-1 px-2.5 rounded-full text-xs font-bold border ${
-                                parseFloat(unrealisedPct) >= 0
+                              <span className={`inline-flex items-center gap-1 py-1 px-2.5 rounded-full text-xs font-bold border ${parseFloat(unrealisedPct) >= 0
                                   ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                                   : 'bg-red-500/10 text-red-400 border-red-500/20'
-                              }`}>
+                                }`}>
                                 {parseFloat(unrealisedPct) >= 0 ? '+' : ''}{unrealisedPct}%
                               </span>
                             ) : (
@@ -433,11 +429,10 @@ function App() {
                           <td className="px-5 py-4 text-right text-gray-400 text-xs">{trade.boughtAt.toFixed(6)}</td>
                           <td className="px-5 py-4 text-right text-gray-300 text-xs">{trade.soldAt.toFixed(6)}</td>
                           <td className="px-5 py-4 text-center">
-                            <span className={`inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-bold border ${
-                              isProfit
+                            <span className={`inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-bold border ${isProfit
                                 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                                 : 'bg-red-500/10 text-red-400 border-red-500/20'
-                            }`}>
+                              }`}>
                               {isProfit ? '+' : ''}{trade.pnlSol.toFixed(4)} SOL
                             </span>
                           </td>
@@ -512,13 +507,12 @@ function App() {
                     </td>
                     <td className="px-6 py-3 text-right text-xs text-gray-400">{w.totalSnipes || 0}</td>
                     <td className="px-6 py-3 text-center">
-                      <span className={`inline-flex items-center gap-1 py-0.5 px-2 rounded text-xs font-medium border ${
-                        w.inUse
+                      <span className={`inline-flex items-center gap-1 py-0.5 px-2 rounded text-xs font-medium border ${w.inUse
                           ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
                           : (w.balance || 0) < 0.05
-                          ? 'bg-red-500/10 text-red-400 border-red-500/20'
-                          : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                      }`}>
+                            ? 'bg-red-500/10 text-red-400 border-red-500/20'
+                            : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                        }`}>
                         {w.inUse ? 'In Use' : (w.balance || 0) < 0.05 ? 'Low Bal' : 'Ready'}
                       </span>
                     </td>
