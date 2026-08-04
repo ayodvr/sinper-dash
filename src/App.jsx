@@ -32,7 +32,10 @@ function App() {
 
   const apiClient = axios.create({
     baseURL: BOT_API_URL,
-    headers: { 'x-api-key': apiKey }
+    headers: {
+      'x-api-key': apiKey,
+      'bypass-tunnel-reminder': 'true',
+    }
   });
 
   const fetchStatus = async () => {
@@ -57,7 +60,10 @@ function App() {
     let pollInterval = null;
 
     const connectSSE = () => {
-      const url = `${BOT_API_URL}/events?` + new URLSearchParams({ 'x-api-key': apiKey });
+      const url = `${BOT_API_URL}/events?` + new URLSearchParams({
+        'x-api-key': apiKey,
+        'bypass-tunnel-reminder': 'true',
+      });
       es = new EventSource(url);
 
       es.onopen = () => {
