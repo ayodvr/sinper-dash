@@ -7,7 +7,7 @@ import {
   Share2, Zap, Copy, Check
 } from 'lucide-react';
 
-const BOT_API_URL = 'https://sinperbot-api-vault.loca.lt';
+const BOT_API_URL = 'https://sustainable-throws-biographies-cake.trycloudflare.com';
 
 function App() {
   const [apiKey, setApiKey] = useState(localStorage.getItem('sinperApiKey') || '');
