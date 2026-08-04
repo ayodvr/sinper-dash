@@ -7,7 +7,7 @@ import {
   Share2, Zap, Copy, Check
 } from 'lucide-react';
 
-const BOT_API_URL = 'https://insider-tropical-hottest-provisions.trycloudflare.com';
+const BOT_API_URL = 'https://sizes-protective-spot-san.trycloudflare.com';
 
 function App() {
   const [apiKey, setApiKey] = useState(localStorage.getItem('sinperApiKey') || '');
@@ -233,8 +233,8 @@ function App() {
 
         <div className="flex items-center gap-3">
           <span className={`px-3 py-1.5 rounded-lg text-xs font-bold border ${isTestMode
-              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-              : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+            : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
             }`}>
             {isTestMode ? '• Test Mode' : '⚡ LIVE MAINNET'}
           </span>
@@ -250,8 +250,8 @@ function App() {
           <button
             onClick={() => toggleBot(isRunning ? 'stop' : 'start')}
             className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-lg ${isRunning
-                ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30 hover:bg-rose-500/30'
-                : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30'
+              ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30 hover:bg-rose-500/30'
+              : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30'
               }`}
           >
             {isRunning ? <><PauseCircle size={16} /> Pause Sniping</> : <><PlayCircle size={16} /> Resume Sniping</>}
@@ -394,8 +394,8 @@ function App() {
                           <td className="px-5 py-4 text-center">
                             {unrealisedPct !== null ? (
                               <span className={`inline-flex items-center gap-1 py-1 px-2.5 rounded-full text-xs font-bold border ${parseFloat(unrealisedPct) >= 0
-                                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                                  : 'bg-red-500/10 text-red-400 border-red-500/20'
+                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                : 'bg-red-500/10 text-red-400 border-red-500/20'
                                 }`}>
                                 {parseFloat(unrealisedPct) >= 0 ? '+' : ''}{unrealisedPct}%
                               </span>
@@ -439,8 +439,8 @@ function App() {
                           <td className="px-5 py-4 text-center">
                             <div className="inline-flex items-center gap-2">
                               <span className={`inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-bold border ${isProfit
-                                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                                  : 'bg-red-500/10 text-red-400 border-red-500/20'
+                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                : 'bg-red-500/10 text-red-400 border-red-500/20'
                                 }`}>
                                 {isProfit ? '+' : ''}{trade.pnlSol.toFixed(4)} SOL
                               </span>
@@ -525,10 +525,10 @@ function App() {
                     <td className="px-6 py-3 text-right text-xs text-gray-400">{w.totalSnipes || 0}</td>
                     <td className="px-6 py-3 text-center">
                       <span className={`inline-flex items-center gap-1 py-0.5 px-2 rounded text-xs font-medium border ${w.inUse
-                          ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                          : (w.balance || 0) < 0.05
-                            ? 'bg-red-500/10 text-red-400 border-red-500/20'
-                            : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                        ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                        : (w.balance || 0) < 0.05
+                          ? 'bg-red-500/10 text-red-400 border-red-500/20'
+                          : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                         }`}>
                         {w.inUse ? 'In Use' : (w.balance || 0) < 0.05 ? 'Low Bal' : 'Ready'}
                       </span>
