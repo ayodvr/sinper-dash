@@ -3,11 +3,10 @@ import axios from 'axios';
 import {
   Power, Settings, TrendingUp, ShieldCheck, Activity, Key,
   Wallet, PlayCircle, PauseCircle, Terminal, XCircle,
-  ChevronDown, ChevronUp, BarChart2, Target, ExternalLink,
-  Share2, Zap, Copy, Check
+  ChevronDown, ChevronUp, BarChart2, Target
 } from 'lucide-react';
 
-const BOT_API_URL = 'https://sizes-protective-spot-san.trycloudflare.com';
+const BOT_API_URL = 'https://neighborhood-hydrogen-beverages-bottom.trycloudflare.com';
 
 function App() {
   const [apiKey, setApiKey] = useState(localStorage.getItem('sinperApiKey') || '');
@@ -18,17 +17,22 @@ function App() {
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showWallets, setShowWallets] = useState(false);
-  const [shareModalTrade, setShareModalTrade] = useState(null);
-  const [copied, setCopied] = useState(false);
   const terminalRef = useRef(null);
 
   const [config, setConfig] = useState({
-    TRADE_SIZE_SOL: '0.05',
+    TRADE_SIZE_SOL: '0.1',
     MAX_OPEN_POSITIONS: '5',
-    TAKE_PROFIT_MULTIPLIER: '3.0',
+    TAKE_PROFIT_MULTIPLIER: '2.0',
     STOP_LOSS_PERCENT: '30',
     TRAILING_STOP_PERCENT: '15',
+    AI_SCORE_THRESHOLD: '70',
     PAPER_TRADING: 'true',
+    PAPER_BALANCE_SOL: '10',
+    SIGNAL_SCORE_THRESHOLD: '30',
+    VOLUME_SPIKE_MULTIPLIER: '1.5',
+    MIN_LP_BURNED_PERCENT: '80',
+    REJECT_HONEYPOT: 'true',
+    REJECT_MINTABLE: 'true'
   });
 
   const apiClient = axios.create({
@@ -51,6 +55,7 @@ function App() {
     }
   };
 
+  // Fix 20: Use SSE for real-time updates instead of polling
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -59,10 +64,12 @@ function App() {
 
     const connectSSE = () => {
       const url = `${BOT_API_URL}/events?` + new URLSearchParams({ 'x-api-key': apiKey });
+      // EventSource doesn't support custom headers; pass key as query param (api.ts accepts both)
       es = new EventSource(url);
 
       es.onopen = () => {
         setError(null);
+        // Clear polling fallback if SSE connects
         if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
       };
 
@@ -76,6 +83,7 @@ function App() {
 
       es.onerror = () => {
         es?.close();
+        // Fall back to polling if SSE fails (e.g. proxy doesn't support streaming)
         if (!pollInterval) {
           fetchStatus();
           pollInterval = setInterval(fetchStatus, 3000);
@@ -83,6 +91,7 @@ function App() {
       };
     };
 
+    // Initial status fetch (fast first render)
     fetchStatus().then(() => connectSSE());
 
     return () => {
@@ -91,17 +100,23 @@ function App() {
     };
   }, [isAuthenticated, apiKey]);
 
+  // Auto-scroll terminal to bottom
   useEffect(() => {
     if (terminalRef.current) {
       terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
     }
   }, [status?.recentLogs]);
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    if (!apiKey) return;
-    localStorage.setItem('sinperApiKey', apiKey);
-    setIsAuthenticated(true);
+    try {
+      await axios.get(`${BOT_API_URL}/status`, { headers: { 'x-api-key': apiKey } });
+      localStorage.setItem('sinperApiKey', apiKey);
+      setIsAuthenticated(true);
+      setError(null);
+    } catch (err) {
+      alert('Invalid API Key or server offline');
+    }
   };
 
   const logout = () => {
@@ -110,12 +125,22 @@ function App() {
     setStatus(null);
   };
 
+  // Fix 1: use apiClient.post (not fetchWithAuth)
   const toggleBot = async (action) => {
     try {
       await apiClient.post('/control', { action });
       fetchStatus();
     } catch (err) {
       console.error('toggleBot failed:', err);
+    }
+  };
+
+  const toggleMode = async (currentIsTestMode) => {
+    try {
+      await apiClient.post('/settings', { PAPER_TRADING: (!currentIsTestMode).toString() });
+      fetchStatus();
+    } catch (err) {
+      console.error('toggleMode failed:', err);
     }
   };
 
@@ -133,39 +158,24 @@ function App() {
     e.preventDefault();
     try {
       await apiClient.post('/settings', config);
-      alert('Config saved and applied live!');
+      alert('Config saved! Restart the bot on the server to apply all changes.');
       setIsConfigOpen(false);
     } catch (err) {
       alert('Failed to save config');
     }
   };
 
-  const handleEmergencySell = async (mint) => {
-    if (!window.confirm(`Are you sure you want to emergency sell ${mint.slice(0, 6)}... now?`)) return;
-    try {
-      const res = await apiClient.post('/exit-position', { mint });
-      if (res.data.success) {
-        alert('Emergency sell order submitted!');
-      } else {
-        alert('Sell failed: ' + (res.data.message || 'Position not found'));
-      }
-    } catch (err) {
-      alert('Failed to execute emergency sell');
-    }
-  };
-
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0B0F19] text-white p-4">
-        <div className="bg-[#111827] border border-white/10 p-8 rounded-2xl w-full max-w-md shadow-2xl">
+      <div className="min-h-screen flex items-center justify-center bg-[#0B0F19] text-white">
+        <div className="bg-[#111827] border border-white/10 p-8 rounded-2xl w-full max-w-sm shadow-2xl">
           <div className="flex justify-center mb-6">
-            <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-500">
-              <Key size={32} />
+            <div className="p-4 rounded-full bg-blue-500/10 border border-blue-500/20">
+              <Key className="w-8 h-8 text-blue-500" />
             </div>
           </div>
           <h2 className="text-2xl font-bold text-center mb-2">Login</h2>
-          <p className="text-gray-400 text-sm text-center mb-6">Enter your Master API Key to connect</p>
-
+          <p className="text-center text-gray-500 text-sm mb-6">Enter your Master API Key to connect</p>
           <form onSubmit={handleLogin}>
             <input
               type="password"
@@ -185,7 +195,7 @@ function App() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0B0F19] text-white p-4">
+      <div className="min-h-screen flex items-center justify-center bg-[#0B0F19] text-white">
         <div className="text-center p-8 bg-red-500/10 border border-red-500/20 rounded-2xl max-w-md w-full relative">
           <button onClick={logout} className="absolute top-4 right-4 text-gray-500 hover:text-white"><XCircle size={20} /></button>
           <ShieldCheck className="w-16 h-16 text-red-500 mx-auto mb-4 opacity-50" />
@@ -207,65 +217,69 @@ function App() {
   const walletStats = status.walletStats || { totalWallets: 0, availableWallets: 0, wallets: [] };
   const recentLogs = status.recentLogs || [];
 
-  const totalPnLSol = tradeHistory.reduce((acc, t) => acc + (t.pnlSol || 0), 0);
-  const totalSnipes = stats.totalSnipes ?? tradeHistory.length;
-  const winningTrades = tradeHistory.filter(t => t.pnlSol > 0).length;
-  const winRate = tradeHistory.length > 0 ? ((winningTrades / tradeHistory.length) * 100).toFixed(1) : '100.0';
+  // Fix 15: computed stats
+  const totalSnipes = (stats.totalBondingCurveSnipes || 0) + (stats.totalAmmSnipes || 0);
+  const winRate = totalSnipes > 0
+    ? ((stats.successfulExits || 0) / totalSnipes * 100).toFixed(1)
+    : '0.0';
+  const totalPnl = parseFloat(stats.totalPnl || 0);
 
   return (
-    <div className="min-h-screen bg-[#0B0F19] text-white p-4 sm:p-6 lg:p-8 font-sans">
-      {/* Top Navigation */}
-      <header className="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-4 mb-8">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-blue-600/10 border border-blue-500/20 rounded-xl text-blue-500">
-            <Activity size={24} />
-          </div>
-          <div>
-            <h1 className="text-xl font-black tracking-tight flex items-center gap-2">
-              Sinper-Bot <span className="text-xs font-normal text-gray-400 px-2 py-0.5 rounded-full bg-white/5 border border-white/10">Dashboard</span>
-            </h1>
-            <p className="text-xs text-gray-500 flex items-center gap-1.5 mt-0.5">
-              <span className={`w-2 h-2 rounded-full ${isRunning ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></span>
-              {isRunning ? 'Live Engine Running' : 'Engine Paused'}
-            </p>
-          </div>
+    <div className="min-h-screen bg-[#0B0F19] text-gray-100 font-sans p-6 md:p-10 selection:bg-blue-500/30">
+
+      {/* Header */}
+      <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
+        <div>
+          <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+            <Activity className="text-blue-500" />
+            Sinper-Bot <span className="text-blue-500 font-light">Dashboard</span>
+          </h1>
+          <p className="text-sm text-gray-500 mt-1 flex items-center gap-2">
+            <span className={`w-2 h-2 rounded-full ${isRunning ? 'bg-emerald-500 animate-pulse' : 'bg-gray-500'}`}></span>
+            {isRunning ? `Live · ${BOT_API_URL}` : `Paused · ${BOT_API_URL}`}
+          </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <span className={`px-3 py-1.5 rounded-lg text-xs font-bold border ${isTestMode
-            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-            : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-            }`}>
-            {isTestMode ? '• Test Mode' : '⚡ LIVE MAINNET'}
-          </span>
-
-          <button onClick={logout} className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white transition">
-            <Power size={18} />
-          </button>
-
-          <button onClick={openConfigModal} className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white transition flex items-center gap-2 text-xs font-semibold">
-            <Settings size={18} /> Settings
-          </button>
-
+        <div className="flex flex-wrap gap-3 justify-end">
           <button
-            onClick={() => toggleBot(isRunning ? 'stop' : 'start')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-lg ${isRunning
-              ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30 hover:bg-rose-500/30'
-              : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30'
+            onClick={() => toggleMode(isTestMode)}
+            className={`px-4 py-2.5 rounded-xl border transition flex items-center gap-2 text-sm font-semibold shadow-lg ${isTestMode
+              ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/20'
+              : 'bg-red-500/10 border-red-500/50 text-red-400 hover:bg-red-500/20'
               }`}
           >
-            {isRunning ? <><PauseCircle size={16} /> Pause Sniping</> : <><PlayCircle size={16} /> Resume Sniping</>}
+            <div className={`w-2 h-2 rounded-full ${isTestMode ? 'bg-emerald-400' : 'bg-red-400'} animate-pulse`}></div>
+            {isTestMode ? 'Test Mode' : 'Live Mode'}
+          </button>
+          <button onClick={logout} className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition text-sm">
+            Logout
+          </button>
+          <button
+            onClick={openConfigModal}
+            className="px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition flex items-center gap-2 text-sm font-medium"
+          >
+            <Settings size={18} /> Settings
+          </button>
+          <button
+            onClick={() => toggleBot(isRunning ? 'stop' : 'start')}
+            className={`px-6 py-2.5 rounded-xl transition flex items-center gap-2 text-sm font-bold shadow-lg ${isRunning
+              ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30 hover:bg-rose-500/20'
+              : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20'
+              }`}
+          >
+            {isRunning ? <PauseCircle size={20} /> : <PlayCircle size={20} />}
+            {isRunning ? 'Pause Sniping' : 'Resume Sniping'}
           </button>
         </div>
-      </header>
+      </div>
 
-      {/* Stats Cards */}
-      <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+      {/* Stats Grid — Fix 15: added Win Rate + Total Snipes */}
+      <div className="max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-8">
         <StatCard
           title="Total PnL"
-          value={`${totalPnLSol >= 0 ? '+' : ''}${totalPnLSol.toFixed(3)} SOL`}
-          icon={<TrendingUp className={totalPnLSol >= 0 ? 'text-emerald-400' : 'text-rose-400'} />}
-          accent={totalPnLSol >= 0 ? 'emerald' : 'rose'}
+          value={`${totalPnl >= 0 ? '+' : ''}${totalPnl.toFixed(4)} SOL`}
+          icon={<TrendingUp className={totalPnl >= 0 ? 'text-emerald-400' : 'text-red-400'} />}
+          accent={totalPnl >= 0 ? 'emerald' : 'red'}
         />
         <StatCard
           title="Active Positions"
@@ -275,13 +289,13 @@ function App() {
         />
         <StatCard
           title="Rugs Dodged"
-          value={stats.rugsDodged ?? stats.rugSkips ?? 0}
+          value={stats.rugSkips || 0}
           icon={<ShieldCheck className="text-purple-400" />}
           accent="purple"
         />
         <StatCard
           title={`Wallets · ${parseFloat(walletStats.totalBalance || 0).toFixed(2)} SOL`}
-          value={`${walletStats.availableWallets ?? 0} / ${walletStats.totalWallets || 3}`}
+          value={`${walletStats.availableWallets ?? 0} / ${walletStats.totalWallets}`}
           icon={<Wallet className="text-orange-400" />}
           accent="orange"
         />
@@ -298,21 +312,6 @@ function App() {
           accent="indigo"
         />
       </div>
-
-      {/* Interactive PnL Growth Chart */}
-      {tradeHistory.length > 0 && (
-        <div className="max-w-7xl mx-auto bg-[#111827] border border-white/5 rounded-2xl p-6 mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-sm font-bold text-gray-300 flex items-center gap-2 uppercase tracking-wider">
-              <TrendingUp size={16} className="text-emerald-400" /> PnL Growth Curve
-            </h3>
-            <span className="text-xs text-emerald-400 font-semibold font-mono">
-              Net Gain: {totalPnLSol >= 0 ? '+' : ''}{totalPnLSol.toFixed(4)} SOL
-            </span>
-          </div>
-          <PnLChart tradeHistory={tradeHistory} />
-        </div>
-      )}
 
       {/* Main Grid: Terminal + Positions */}
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
@@ -361,9 +360,10 @@ function App() {
                 <tr>
                   <th className="px-5 py-4">Token</th>
                   <th className="px-5 py-4 text-right">Entry</th>
+                  {/* Fix 14: show unrealised P&L column */}
                   <th className="px-5 py-4 text-right">{showHistory ? 'Sold At' : 'Size'}</th>
-                  <th className="px-5 py-4 text-center">{showHistory ? 'PnL' : 'Status'}</th>
-                  <th className="px-5 py-4 text-center">{showHistory ? 'Reason' : 'Action'}</th>
+                  <th className="px-5 py-4 text-center">{showHistory ? 'PnL' : 'Track'}</th>
+                  <th className="px-5 py-4 text-center">{showHistory ? 'Reason' : 'Status'}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -377,13 +377,8 @@ function App() {
                         : null;
                       return (
                         <tr key={i} className="hover:bg-white/5 transition">
-                          <td className="px-5 py-4 font-mono text-xs">
-                            <div className="flex items-center gap-2 text-blue-400">
-                              <span>{pos.mint.slice(0, 6)}...{pos.mint.slice(-6)}</span>
-                              <a href={`https://dexscreener.com/solana/${pos.mint}`} target="_blank" rel="noreferrer" title="DexScreener" className="text-gray-500 hover:text-blue-400 transition">
-                                <ExternalLink size={12} />
-                              </a>
-                            </div>
+                          <td className="px-5 py-4 font-mono text-blue-400 text-xs">
+                            {pos.mint.slice(0, 6)}...{pos.mint.slice(-6)}
                           </td>
                           <td className="px-5 py-4 text-right text-gray-300 text-xs">
                             {(pos.entryPrice / 1_000_000_000).toFixed(8)} SOL
@@ -391,6 +386,16 @@ function App() {
                           <td className="px-5 py-4 text-right text-gray-300 text-xs">
                             {(pos.amountInLamports / 1_000_000_000).toFixed(3)} SOL
                           </td>
+                          {/* Track badge */}
+                          <td className="px-5 py-4 text-center">
+                            <span className={`inline-flex py-0.5 px-2 rounded text-xs font-medium ${pos.source === 'amm'
+                              ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
+                              : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                              }`}>
+                              {pos.source === 'amm' ? 'AMM' : 'Curve'}
+                            </span>
+                          </td>
+                          {/* Fix 14: live unrealised P&L */}
                           <td className="px-5 py-4 text-center">
                             {unrealisedPct !== null ? (
                               <span className={`inline-flex items-center gap-1 py-1 px-2.5 rounded-full text-xs font-bold border ${parseFloat(unrealisedPct) >= 0
@@ -405,14 +410,6 @@ function App() {
                               </span>
                             )}
                           </td>
-                          <td className="px-5 py-4 text-center">
-                            <button
-                              onClick={() => handleEmergencySell(pos.mint)}
-                              className="px-2.5 py-1 text-xs font-bold text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-lg hover:bg-rose-500/20 transition inline-flex items-center gap-1"
-                            >
-                              <Zap size={12} /> Sell Now
-                            </button>
-                          </td>
                         </tr>
                       );
                     })
@@ -426,34 +423,18 @@ function App() {
                       return (
                         <tr key={i} className="hover:bg-white/5 transition">
                           <td className="px-5 py-4 font-mono text-gray-400 text-xs">
-                            <div className="flex items-center gap-2">
-                              <span>{trade.mint.slice(0, 6)}...{trade.mint.slice(-6)}</span>
-                              <a href={`https://dexscreener.com/solana/${trade.mint}`} target="_blank" rel="noreferrer" title="DexScreener" className="text-gray-500 hover:text-blue-400 transition">
-                                <ExternalLink size={12} />
-                              </a>
-                            </div>
+                            <div>{trade.mint.slice(0, 6)}...{trade.mint.slice(-6)}</div>
                             <div className="text-gray-600 mt-0.5">{new Date(trade.timestamp).toLocaleTimeString()}</div>
                           </td>
                           <td className="px-5 py-4 text-right text-gray-400 text-xs">{trade.boughtAt.toFixed(6)}</td>
                           <td className="px-5 py-4 text-right text-gray-300 text-xs">{trade.soldAt.toFixed(6)}</td>
                           <td className="px-5 py-4 text-center">
-                            <div className="inline-flex items-center gap-2">
-                              <span className={`inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-bold border ${isProfit
-                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                                : 'bg-red-500/10 text-red-400 border-red-500/20'
-                                }`}>
-                                {isProfit ? '+' : ''}{trade.pnlSol.toFixed(4)} SOL
-                              </span>
-                              {isProfit && (
-                                <button
-                                  onClick={() => setShareModalTrade(trade)}
-                                  className="p-1 text-gray-500 hover:text-emerald-400 transition"
-                                  title="Share Win Card"
-                                >
-                                  <Share2 size={14} />
-                                </button>
-                              )}
-                            </div>
+                            <span className={`inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-bold border ${isProfit
+                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                              : 'bg-red-500/10 text-red-400 border-red-500/20'
+                              }`}>
+                              {isProfit ? '+' : ''}{trade.pnlSol.toFixed(4)} SOL
+                            </span>
                           </td>
                           <td className="px-5 py-4 text-center">
                             <ReasonBadge reason={trade.reason} />
@@ -469,7 +450,7 @@ function App() {
         </div>
       </div>
 
-      {/* Wallet Breakdown Panel */}
+      {/* Fix 16: Wallet Breakdown Panel */}
       <div className="max-w-7xl mx-auto mb-6">
         <button
           onClick={() => setShowWallets(!showWallets)}
@@ -497,6 +478,7 @@ function App() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
+                {/* Master Wallet Row */}
                 {walletStats.masterBalance && (
                   <tr className="hover:bg-white/5 transition bg-[#1A2333]/50">
                     <td className="px-6 py-3 font-mono text-xs text-emerald-400 font-semibold flex items-center gap-2">
@@ -514,6 +496,7 @@ function App() {
                     </td>
                   </tr>
                 )}
+                {/* Sub-wallets */}
                 {(walletStats.wallets || []).map((w, i) => (
                   <tr key={i} className="hover:bg-white/5 transition">
                     <td className="px-6 py-3 font-mono text-xs text-gray-400">
@@ -539,6 +522,12 @@ function App() {
             </table>
           </div>
         )}
+
+        {showWallets && (walletStats.wallets || []).length === 0 && (
+          <div className="mt-2 bg-[#111827] border border-white/5 rounded-2xl px-6 py-8 text-center text-gray-600 text-sm">
+            No wallet data available yet. The bot exposes wallet details in <code className="text-gray-500">walletStats.wallets</code>.
+          </div>
+        )}
       </div>
 
       {/* Settings Modal */}
@@ -550,6 +539,7 @@ function App() {
             </h2>
 
             <form onSubmit={saveConfig} className="space-y-4">
+              {/* Trading Mode & Size */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-400 mb-2">Paper Trading (Simulated)</label>
@@ -564,6 +554,7 @@ function App() {
                   onChange={v => setConfig({ ...config, TRADE_SIZE_SOL: v })} />
               </div>
 
+              {/* Exit Logic */}
               <div className="grid grid-cols-3 gap-4">
                 <FormField label="Take Profit (x)" value={config.TAKE_PROFIT_MULTIPLIER}
                   onChange={v => setConfig({ ...config, TAKE_PROFIT_MULTIPLIER: v })} type="number" accent="emerald" />
@@ -583,118 +574,6 @@ function App() {
           </div>
         </div>
       )}
-
-      {/* Share Win Modal */}
-      {shareModalTrade && (
-        <ShareModal trade={shareModalTrade} onClose={() => setShareModalTrade(null)} />
-      )}
-    </div>
-  );
-}
-
-function PnLChart({ tradeHistory }) {
-  let cumulative = 0;
-  const points = tradeHistory.slice().reverse().map((t, idx) => {
-    cumulative += (t.pnlSol || 0);
-    return { x: idx, y: cumulative };
-  });
-
-  if (points.length === 0) return null;
-
-  const minY = Math.min(0, ...points.map(p => p.y));
-  const maxY = Math.max(0.1, ...points.map(p => p.y));
-  const rangeY = (maxY - minY) || 1;
-
-  const width = 600;
-  const height = 120;
-
-  const pathD = points.map((p, i) => {
-    const px = (i / Math.max(1, points.length - 1)) * width;
-    const py = height - (((p.y - minY) / rangeY) * (height - 20) + 10);
-    return `${i === 0 ? 'M' : 'L'} ${px} ${py}`;
-  }).join(' ');
-
-  const areaD = `${pathD} L ${width} ${height} L 0 ${height} Z`;
-
-  return (
-    <div className="w-full h-32 relative">
-      <svg className="w-full h-full overflow-visible" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
-        <defs>
-          <linearGradient id="pnlGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#10B981" stopOpacity="0.4" />
-            <stop offset="100%" stopColor="#10B981" stopOpacity="0.0" />
-          </linearGradient>
-        </defs>
-        <path d={areaD} fill="url(#pnlGrad)" />
-        <path d={pathD} fill="none" stroke="#10B981" strokeWidth="2.5" strokeLinecap="round" />
-      </svg>
-    </div>
-  );
-}
-
-function ShareModal({ trade, onClose }) {
-  const [copied, setCopied] = useState(false);
-  const pnlPct = trade.boughtAt > 0 ? (((trade.soldAt - trade.boughtAt) / trade.boughtAt) * 100).toFixed(1) : '0.0';
-  const shareText = `🚀 Just bagged +${trade.pnlSol.toFixed(4)} SOL (+${pnlPct}%) on $${trade.mint.slice(0, 6)} using SinperBot! 🎯⚡`;
-
-  const copyText = () => {
-    navigator.clipboard.writeText(shareText);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
-
-  return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-[#111827] border border-white/10 p-8 rounded-2xl w-full max-w-md shadow-2xl text-center relative">
-        <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-white"><XCircle size={20} /></button>
-        <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl w-14 h-14 mx-auto mb-4 flex items-center justify-center text-emerald-400">
-          <TrendingUp size={28} />
-        </div>
-        <h3 className="text-xl font-bold text-white mb-1">Share Your Win!</h3>
-        <p className="text-xs text-gray-400 mb-6">Brag about your trade on Twitter/X or Telegram</p>
-
-        {/* Styled Card */}
-        <div className="bg-gradient-to-br from-emerald-950/40 via-[#111827] to-black border border-emerald-500/30 p-6 rounded-2xl mb-6 relative overflow-hidden text-left">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <p className="text-[10px] uppercase font-bold text-gray-500 tracking-wider">Token Mint</p>
-              <p className="font-mono text-sm text-gray-200 font-bold">{trade.mint.slice(0, 8)}...{trade.mint.slice(-6)}</p>
-            </div>
-            <span className="px-2.5 py-1 rounded-full text-xs font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-              +{pnlPct}%
-            </span>
-          </div>
-          <p className="text-3xl font-black text-emerald-400 tracking-tight mb-1">
-            +{trade.pnlSol.toFixed(4)} SOL
-          </p>
-          <p className="text-[11px] text-gray-500 flex items-center gap-1 font-medium">
-            <span>Entry: {trade.boughtAt.toFixed(4)}</span> · <span>Exit: {trade.soldAt.toFixed(4)}</span>
-          </p>
-          <div className="mt-4 pt-3 border-t border-white/10 flex justify-between items-center text-[10px] text-gray-400">
-            <span>Powered by <strong className="text-white">SinperBot 🚀</strong></span>
-            <span>{new Date(trade.timestamp).toLocaleTimeString()}</span>
-          </div>
-        </div>
-
-        <div className="flex gap-3">
-          <button
-            onClick={copyText}
-            className="flex-1 py-3 rounded-xl bg-white/5 hover:bg-white/10 font-bold text-white transition flex items-center justify-center gap-2 text-xs"
-          >
-            {copied ? <><Check size={14} className="text-emerald-400" /> Copied!</> : <><Copy size={14} /> Copy Text</>}
-          </button>
-          <a
-            href={tweetUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 font-bold text-white shadow-lg shadow-blue-500/20 transition flex items-center justify-center gap-2 text-xs"
-          >
-            <Share2 size={14} /> Post to X
-          </a>
-        </div>
-      </div>
     </div>
   );
 }
