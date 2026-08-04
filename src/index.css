@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg-base: #0B0F19;
+}
+
+body {
+  background-color: var(--color-bg-base);
+  color: #f3f4f6; /* Tailwind gray-100 */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
