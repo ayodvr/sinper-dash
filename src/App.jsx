@@ -275,7 +275,7 @@ function App() {
         />
         <StatCard
           title="Rugs Dodged"
-          value={stats.rugsDodged || 0}
+          value={stats.rugsDodged ?? stats.rugSkips ?? 0}
           icon={<ShieldCheck className="text-purple-400" />}
           accent="purple"
         />
