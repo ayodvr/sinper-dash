@@ -7,7 +7,7 @@ import {
   Share2, Zap, Copy, Check
 } from 'lucide-react';
 
-const BOT_API_URL = 'https://neighborhood-hydrogen-beverages-bottom.trycloudflare.com';
+const BOT_API_URL = 'https://sinperbot-api-vault.loca.lt';
 
 function App() {
   const [apiKey, setApiKey] = useState(localStorage.getItem('sinperApiKey') || '');
