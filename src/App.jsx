@@ -7,7 +7,7 @@ import {
   Share2, Zap, Copy, Check
 } from 'lucide-react';
 
-const BOT_API_URL = 'https://sustainable-throws-biographies-cake.trycloudflare.com';
+const BOT_API_URL = typeof window !== 'undefined' && window.location.origin.includes('http') ? window.location.origin : 'https://sniper.cybroxlabs.com';
 
 function App() {
   const [apiKey, setApiKey] = useState(localStorage.getItem('sinperApiKey') || '');
