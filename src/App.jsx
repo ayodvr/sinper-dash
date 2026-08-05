@@ -163,7 +163,7 @@ function App() {
     if (!window.confirm('Sweep all sub-wallet SOL back to Master Vault?')) return;
     try {
       setIsSweeping(true);
-      const res = await apiClient.post('/sweep');
+      const res = await apiClient.post('/control', { action: 'sweep' });
       if (res.data.success) {
         alert('✅ All sub-wallet SOL swept back to Master Vault!');
       } else {
