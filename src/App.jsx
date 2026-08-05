@@ -212,7 +212,7 @@ function App() {
   const recentLogs = status.recentLogs || [];
 
   const totalPnLSol = tradeHistory.reduce((acc, t) => acc + (t.pnlSol || 0), 0);
-  const totalSnipes = stats.totalSnipes ?? tradeHistory.length;
+  const totalSnipes = stats.totalSnipes ?? ((stats.totalBondingCurveSnipes || 0) + (stats.totalAmmSnipes || 0)) || walletStats.totalSnipes || tradeHistory.length;
   const winningTrades = tradeHistory.filter(t => t.pnlSol > 0).length;
   const winRate = tradeHistory.length > 0 ? ((winningTrades / tradeHistory.length) * 100).toFixed(1) : '100.0';
 
