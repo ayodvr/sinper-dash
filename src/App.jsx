@@ -158,6 +158,24 @@ function App() {
     }
   };
 
+  const [isSweeping, setIsSweeping] = useState(false);
+  const handleSweep = async () => {
+    if (!window.confirm('Sweep all sub-wallet SOL back to Master Vault?')) return;
+    try {
+      setIsSweeping(true);
+      const res = await apiClient.post('/sweep');
+      if (res.data.success) {
+        alert('✅ All sub-wallet SOL swept back to Master Vault!');
+      } else {
+        alert('❌ Sweep failed: ' + (res.data.message || res.data.error || 'Unknown error'));
+      }
+    } catch (err) {
+      alert('❌ Failed to execute sweep');
+    } finally {
+      setIsSweeping(false);
+    }
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0B0F19] text-white p-4">
@@ -309,9 +327,18 @@ function App() {
           <h3 className="text-sm font-bold text-gray-300 flex items-center gap-2 uppercase tracking-wider">
             <Wallet size={16} className="text-orange-400" /> Wallet Overview
           </h3>
-          <span className="text-xs font-mono text-gray-400">
-            {walletStats.availableWallets ?? 0}/{walletStats.totalWallets || 3} Active Sub-Wallets
-          </span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleSweep}
+              disabled={isSweeping}
+              className="text-xs px-3 py-1.5 rounded-lg bg-orange-500/10 border border-orange-500/20 text-orange-400 font-bold hover:bg-orange-500/20 transition flex items-center gap-1.5 cursor-pointer"
+            >
+              {isSweeping ? 'Sweeping...' : '🧹 Sweep Funds to Vault'}
+            </button>
+            <span className="text-xs font-mono text-gray-400">
+              {walletStats.availableWallets ?? 0}/{walletStats.totalWallets || 3} Active Sub-Wallets
+            </span>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
@@ -559,7 +586,18 @@ function App() {
                   onChange={v => setConfig({ ...config, TRAILING_STOP_PERCENT: v })} type="number" />
               </div>
 
-              <div className="flex gap-4 mt-8 pt-6 border-t border-white/10">
+              <div className="pt-4 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={handleSweep}
+                  disabled={isSweeping}
+                  className="w-full py-3 rounded-xl bg-orange-500/10 border border-orange-500/30 text-orange-400 font-bold hover:bg-orange-500/20 transition flex items-center justify-center gap-2 text-sm cursor-pointer"
+                >
+                  {isSweeping ? 'Sweeping Funds...' : '🧹 Sweep All Sub-Wallets to Master Vault'}
+                </button>
+              </div>
+
+              <div className="flex gap-4 mt-6 pt-4 border-t border-white/10">
                 <button type="button" onClick={() => setIsConfigOpen(false)}
                   className="flex-1 py-3 rounded-xl bg-white/5 hover:bg-white/10 font-medium transition">Cancel</button>
                 <button type="submit"
