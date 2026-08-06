@@ -7,7 +7,9 @@ import {
   Share2, Zap, Copy, Check
 } from 'lucide-react';
 
-const BOT_API_URL = typeof window !== 'undefined' && window.location.origin.includes('http') ? window.location.origin : 'https://sniper.cybroxlabs.com';
+// ✅ DASH FIX 5: Use VITE_BOT_API_URL so the dashboard correctly points to the bot server
+// regardless of where the dashboard itself is hosted. Set VITE_BOT_API_URL in your .env file.
+const BOT_API_URL = import.meta.env.VITE_BOT_API_URL || 'https://sniper.cybroxlabs.com';
 
 function App() {
   const [apiKey, setApiKey] = useState(localStorage.getItem('sinperApiKey') || '');
@@ -23,9 +25,9 @@ function App() {
   const [config, setConfig] = useState({
     TRADE_SIZE_SOL: '0.05',
     MAX_OPEN_POSITIONS: '5',
-    TAKE_PROFIT_MULTIPLIER: '3.0',
-    STOP_LOSS_PERCENT: '30',
-    TRAILING_STOP_PERCENT: '15',
+    TAKE_PROFIT_MULTIPLIER: '35',  // ✅ DASH FIX 4: now in % (35 = 35% profit target), not multiplier
+    STOP_LOSS_PERCENT: '25',
+    TRAILING_STOP_PERCENT: '10',
     PAPER_TRADING: 'true',
   });
 
@@ -229,10 +231,15 @@ function App() {
   const walletStats = status.walletStats || { totalWallets: 0, availableWallets: 0, wallets: [] };
   const recentLogs = status.recentLogs || [];
 
-  const totalPnLSol = tradeHistory.reduce((acc, t) => acc + (t.pnlSol || 0), 0);
+  // ✅ DASH FIX 2: Use stats.totalPnl (authoritative running total) not re-summed trade history
+  // trade history only contains last 20 trades so the re-sum always understates real PnL
+  const totalPnLSol = typeof status.totalPnl === 'number'
+    ? status.totalPnl
+    : tradeHistory.reduce((acc, t) => acc + (t.pnlSol || 0), 0);
   const totalSnipes = stats.totalSnipes ?? ((stats.totalBondingCurveSnipes || 0) + (stats.totalAmmSnipes || 0)) || walletStats.totalSnipes || tradeHistory.length;
   const winningTrades = tradeHistory.filter(t => t.pnlSol > 0).length;
-  const winRate = tradeHistory.length > 0 ? ((winningTrades / tradeHistory.length) * 100).toFixed(1) : '100.0';
+  // ✅ DASH FIX 1: Show 'N/A' instead of misleading 100% when no trades have completed
+  const winRate = tradeHistory.length > 0 ? ((winningTrades / tradeHistory.length) * 100).toFixed(1) : 'N/A';
 
   return (
     <div className="min-h-screen bg-[#0B0F19] text-white p-3 sm:p-6 lg:p-8 font-sans antialiased">
@@ -457,9 +464,13 @@ function App() {
                     <tr><td colSpan="5" className="px-5 py-12 text-center text-gray-600">No active positions.</td></tr>
                   ) : (
                     activePositions.map((pos, i) => {
-                      const unrealisedPct = pos.currentPriceEstimate && pos.entryPrice
-                        ? (((pos.currentPriceEstimate - pos.entryPrice) / pos.entryPrice) * 100).toFixed(1)
-                        : null;
+                      // ✅ DASH FIX 3: Show live unrealised P&L from currentPriceChangePercent
+                      // (populated each monitor tick by exit-manager and sent via SSE)
+                      const unrealisedPct = typeof pos.currentPriceChangePercent === 'number'
+                        ? pos.currentPriceChangePercent.toFixed(1)
+                        : pos.currentPriceEstimate && pos.entryPrice
+                          ? (((pos.currentPriceEstimate - pos.entryPrice) / pos.entryPrice) * 100).toFixed(1)
+                          : null;
                       return (
                         <tr key={i} className="hover:bg-white/5 transition">
                           <td className="px-4 py-3 sm:px-5 sm:py-4 font-mono text-xs">
@@ -578,8 +589,9 @@ function App() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <FormField label="Take Profit (x)" value={config.TAKE_PROFIT_MULTIPLIER}
-                  onChange={v => setConfig({ ...config, TAKE_PROFIT_MULTIPLIER: v })} type="number" accent="emerald" />
+                <FormField label="Take Profit (%)" value={config.TAKE_PROFIT_MULTIPLIER}
+                  onChange={v => setConfig({ ...config, TAKE_PROFIT_MULTIPLIER: v })} type="number" accent="emerald"
+                  placeholder="e.g. 35 = exit at +35%" />
                 <FormField label="Stop Loss (%)" value={config.STOP_LOSS_PERCENT}
                   onChange={v => setConfig({ ...config, STOP_LOSS_PERCENT: v })} type="number" accent="rose" />
                 <FormField label="Trail Stop (%)" value={config.TRAILING_STOP_PERCENT}
@@ -632,6 +644,10 @@ function PnLChart({ tradeHistory }) {
   const width = 600;
   const height = 120;
 
+  // ✅ DASH FIX 6: Color chart red when losing, green when profitable
+  const finalValue = points[points.length - 1]?.y ?? 0;
+  const chartColor = finalValue >= 0 ? '#10B981' : '#F43F5E';
+
   const pathD = points.map((p, i) => {
     const px = (i / Math.max(1, points.length - 1)) * width;
     const py = height - (((p.y - minY) / rangeY) * (height - 20) + 10);
@@ -645,12 +661,12 @@ function PnLChart({ tradeHistory }) {
       <svg className="w-full h-full overflow-visible" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
         <defs>
           <linearGradient id="pnlGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#10B981" stopOpacity="0.4" />
-            <stop offset="100%" stopColor="#10B981" stopOpacity="0.0" />
+            <stop offset="0%" stopColor={chartColor} stopOpacity="0.4" />
+            <stop offset="100%" stopColor={chartColor} stopOpacity="0.0" />
           </linearGradient>
         </defs>
         <path d={areaD} fill="url(#pnlGrad)" />
-        <path d={pathD} fill="none" stroke="#10B981" strokeWidth="2.5" strokeLinecap="round" />
+        <path d={pathD} fill="none" stroke={chartColor} strokeWidth="2.5" strokeLinecap="round" />
       </svg>
     </div>
   );
@@ -740,7 +756,7 @@ function StatCard({ title, value, icon, accent = 'blue' }) {
   );
 }
 
-function FormField({ label, value, onChange, type = 'text', accent = 'blue' }) {
+function FormField({ label, value, onChange, type = 'text', accent = 'blue', placeholder = '' }) {
   return (
     <div>
       <label className="block text-sm font-medium text-gray-400 mb-2">{label}</label>
@@ -748,6 +764,7 @@ function FormField({ label, value, onChange, type = 'text', accent = 'blue' }) {
         type={type}
         value={value}
         onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
         className={`w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-${accent}-500 transition`}
       />
     </div>
