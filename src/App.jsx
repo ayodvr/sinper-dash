@@ -237,9 +237,15 @@ function App() {
     ? status.totalPnl
     : tradeHistory.reduce((acc, t) => acc + (t.pnlSol || 0), 0);
   const totalSnipes = stats.totalSnipes ?? ((stats.totalBondingCurveSnipes || 0) + (stats.totalAmmSnipes || 0)) || walletStats.totalSnipes || tradeHistory.length;
-  const winningTrades = tradeHistory.filter(t => t.pnlSol > 0).length;
-  // ✅ DASH FIX 1: Show 'N/A' instead of misleading 100% when no trades have completed
-  const winRate = tradeHistory.length > 0 ? ((winningTrades / tradeHistory.length) * 100).toFixed(1) : 'N/A';
+  // ✅ DASH FIX 1 / 7: Prefer the server's authoritative running totals (stats.successfulExits /
+  // stats.winningExits, tracked over ALL-time trades) over recomputing from tradeHistory, which
+  // the SSE stream truncates to the last 20 entries — recomputing locally silently understates
+  // history once more than 20 trades have completed. Show 'N/A' when there's truly no data yet.
+  const winRate = stats.successfulExits > 0
+    ? ((stats.winningExits / stats.successfulExits) * 100).toFixed(1)
+    : tradeHistory.length > 0
+      ? ((tradeHistory.filter(t => t.pnlSol > 0).length / tradeHistory.length) * 100).toFixed(1)
+      : 'N/A';
 
   return (
     <div className="min-h-screen bg-[#0B0F19] text-white p-3 sm:p-6 lg:p-8 font-sans antialiased">
